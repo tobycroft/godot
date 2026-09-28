@@ -7,7 +7,7 @@
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bg"]
 shader = ExtResource("2_shader")
-shader_uniforms = {"blur": 0.6}
+shader_uniforms = {"blur": 0.2}
 
 [node name="Control" type="Control" unique_id=1645209930]
 layout_mode = 3
@@ -40,6 +40,16 @@ grow_vertical = 2
 texture = ExtResource("1_bg")
 stretch_mode = 6
 material = SubResource("ShaderMaterial_bg")
+
+[node name="DarkOverlay" type="ColorRect" parent="Background"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.2)
+mouse_filter = 2
 
 [node name="StartButton" type="Button" parent="." unique_id=1465777537]
 layout_mode = 1
