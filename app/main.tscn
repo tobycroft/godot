@@ -1,8 +1,13 @@
 [gd_scene format=3 uid="uid://ch5o2jxqxpjil"]
 
 [ext_resource type="Texture2D" uid="uid://buwvi5hxup26" path="res://app/main/bg.jpg" id="1_bg"]
+[ext_resource type="Shader" path="res://app/main/blur_bg.gdshader" id="2_shader"]
 
 [sub_resource type="Theme" id="Theme_108p4"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bg"]
+shader = ExtResource("2_shader")
+shader_uniforms = {"blur": 0.6}
 
 [node name="Control" type="Control" unique_id=1645209930]
 layout_mode = 3
@@ -34,6 +39,7 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("1_bg")
 stretch_mode = 6
+material = SubResource("ShaderMaterial_bg")
 
 [node name="StartButton" type="Button" parent="." unique_id=1465777537]
 layout_mode = 1
