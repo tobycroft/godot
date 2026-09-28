@@ -3,7 +3,7 @@ shader_type canvas_item;
 uniform float blur : hint_range(0.0, 1.0) = 0.6;
 
 void fragment() {
-	vec2 texel = vec2(1.0) / textureSize(TEXTURE, 0);
+	vec2 texel = vec2(1.0) / vec2(textureSize(TEXTURE, 0));
 	vec2 radius = blur * 16.0 * texel;
 	vec4 color = vec4(0.0);
 	float count = 0.0;
