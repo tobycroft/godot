@@ -1,0 +1,81 @@
+[gd_scene format=3 uid="uid://ch5o2jxqxpjil"]
+
+[ext_resource type="Texture2D" uid="uid://buwvi5hxup26" path="res://app/main/bg.jpg" id="1_bg"]
+
+[sub_resource type="Theme" id="Theme_108p4"]
+
+[node name="Control" type="Control" unique_id=1645209930]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme_108p4")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1965625731]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BgImage" type="TextureRect" parent="Background" unique_id=401857701]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -1820.0
+offset_top = -980.0
+offset_right = 868.0
+offset_bottom = 532.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("1_bg")
+stretch_mode = 6
+
+[node name="StartButton" type="Button" parent="." unique_id=1465777537]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -561.0
+offset_top = 114.0
+offset_right = -321.0
+offset_bottom = 174.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Start"
+
+[node name="SettingsButton" type="Button" parent="." unique_id=947361388]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -561.0
+offset_top = 180.0
+offset_right = -321.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Settings"
+
+[node name="QuitButton" type="Button" parent="." unique_id=121135028]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -561.0
+offset_top = 249.0
+offset_right = -321.0
+offset_bottom = 309.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Quit"
