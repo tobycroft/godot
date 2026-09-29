@@ -29,11 +29,11 @@ func is_on_ground() -> bool:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _running:
 		return
-	if event.is_action_just_pressed("move_left"):
+	if event.is_action_pressed("move_left") and event.pressed and not event.echo:
 		_lane = maxi(_lane - 1, 0)
-	elif event.is_action_just_pressed("move_right"):
+	elif event.is_action_pressed("move_right") and event.pressed and not event.echo:
 		_lane = mini(_lane + 1, LANE_X.size() - 1)
-	elif event.is_action_just_pressed("jump") and is_on_ground():
+	elif event.is_action_pressed("jump") and event.pressed and not event.echo and is_on_ground():
 		_velocity_y = JUMP_VELOCITY
 
 func _physics_process(delta: float) -> void:
