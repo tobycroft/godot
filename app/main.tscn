@@ -2,6 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://buwvi5hxup26" path="res://app/main/bg.jpg" id="1_bg"]
 [ext_resource type="Shader" uid="uid://cvqaqc83syitd" path="res://app/main/blur_bg.gdshader" id="2_shader"]
+[ext_resource type="Script" path="res://app/main/main.gd" id="3_main"]
 
 [sub_resource type="Theme" id="Theme_108p4"]
 
@@ -17,6 +18,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = SubResource("Theme_108p4")
+script = ExtResource("3_main")
 
 [node name="Background" type="ColorRect" parent="." unique_id=1965625731]
 layout_mode = 1
@@ -51,7 +53,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.2)
 
-[node name="StartButton" type="Button" parent="." unique_id=1465777537]
+[node name="Start2DButton" type="Button" parent="." unique_id=1465777537]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -60,11 +62,26 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -561.0
 offset_top = -311.0
+offset_right = -441.0
+offset_bottom = -251.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "2D"
+
+[node name="Start3DButton" type="Button" parent="." unique_id=1465777538]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -441.0
+offset_top = -311.0
 offset_right = -321.0
 offset_bottom = -251.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "Start"
+text = "3D"
 
 [node name="SettingsButton" type="Button" parent="." unique_id=947361388]
 layout_mode = 1

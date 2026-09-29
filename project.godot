@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="godot_firstflight"
-run/main_scene="res://app/world/world.tscn"
+run/main_scene="uid://ch5o2jxqxpjil"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
