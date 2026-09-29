@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://app/world/player.gd" id="1_player"]
+[ext_resource type="PackedScene" path="res://app/world/models/character.glb" id="2_model"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.25
+height = 1.1
+
+[node name="Player" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_player")
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="CameraPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="CameraArm" type="SpringArm3D" parent="CameraPivot"]
+collision_mask = 1
+spring_length = 4.5
+margin = 0.25
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot/CameraArm"]
+fov = 70.0
+current = true
