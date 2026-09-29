@@ -1,7 +1,7 @@
 class_name Player
 extends CharacterBody3D
 ## 第三人称玩家控制器。
-## WASD / 方向键移动，Space 跳跃，鼠标控制视角环绕，Esc 释放鼠标。
+## WASD / 方向键移动，Space 跳跃，鼠标控制视角环绕。Esc 由 Pause 自动加载接管（弹出暂停菜单）。
 
 const SPEED := 5.0
 const ACCELERATION := 10.0
@@ -23,8 +23,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	elif event.is_action_pressed("ui_cancel"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
 		camera_pivot.rotation.x = clampf(

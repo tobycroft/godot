@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://buwvi5hxup26" path="res://app/main/bg.jpg" id="1_bg"]
 [ext_resource type="Shader" uid="uid://cvqaqc83syitd" path="res://app/main/blur_bg.gdshader" id="2_shader"]
-[ext_resource type="Script" path="res://app/main/main.gd" id="3_main"]
+[ext_resource type="Script" uid="uid://ccl5fou8of1ga" path="res://app/main/main.gd" id="3_main"]
 
 [sub_resource type="Theme" id="Theme_108p4"]
 
