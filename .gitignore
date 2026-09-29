@@ -1,0 +1,9 @@
+# Godot 4+ specific ignores
+.godot/
+
+# JetBrains IDE (Rider, etc.)
+.idea/
+
+# OS / system files
+.DS_Store
+Thumbs.db
