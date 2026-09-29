@@ -14,7 +14,7 @@ generator_parameters={
 
 [deps]
 
-source_file="res://app/game/world/models/character_texture_20250901.png"
+source_file="res://game/world/models/character_texture_20250901.png"
 dest_files=["res://.godot/imported/character_texture_20250901.png-62578ee7b919b1963376cb3884e745d6.s3tc.ctex"]
 
 [params]

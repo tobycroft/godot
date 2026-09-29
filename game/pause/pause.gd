@@ -2,7 +2,7 @@ extends Node
 ## Esc 暂停管理器（自动加载）。
 ## 在任意界面按 Esc 弹出/关闭暂停菜单（模糊 + 20% 变暗 + 返回主菜单/退出游戏）。
 
-const PAUSE_SCENE := preload("res://app/game/pause/pause_menu.tscn")
+const PAUSE_SCENE := preload("res://game/pause/pause_menu.tscn")
 
 var overlay: CanvasLayer = null
 var _prev_mouse_mode := Input.MOUSE_MODE_VISIBLE
