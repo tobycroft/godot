@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://app/world/player.gd" id="1_player"]
-[ext_resource type="PackedScene" path="res://app/world/models/character.glb" id="2_model"]
+[ext_resource type="Script" path="res://app/game/world/player.gd" id="1_player"]
+[ext_resource type="PackedScene" path="res://app/game/world/models/character.glb" id="2_model"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.25

@@ -19,7 +19,7 @@ func _on_2d_pressed() -> void:
 
 
 func _on_3d_pressed() -> void:
-	get_tree().change_scene_to_file("res://app/runner/runner.tscn")
+	get_tree().change_scene_to_file("res://app/game/runner/runner.tscn")
 
 
 func _on_quit_pressed() -> void:

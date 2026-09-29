@@ -2,8 +2,7 @@ extends Node3D
 ## 跑酷游戏：沿马路自动前进，收集金币、躲避障碍，计分。
 
 const COIN_VALUE := 10
-const START_SPEED := 8.0
-const MAX_SPEED := 20.0
+const START_SPEED := 20.0
 const SPEED_GROWTH := 0.2
 const SPAWN_FAR := -130.0
 const RECYCLE_Z := 7.0
@@ -39,8 +38,9 @@ func _connect_ui() -> void:
 func _physics_process(delta: float) -> void:
 	if not _running:
 		return
-	_speed = minf(_speed + SPEED_GROWTH * delta, MAX_SPEED)
+	_speed = _speed + SPEED_GROWTH * delta
 	_distance += _speed * delta
+	player.set_run_pace(_speed)
 
 	for it in _items:
 		var n := it.node as Node3D
