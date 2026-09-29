@@ -14,7 +14,7 @@ func _ready() -> void:
 func _on_home_pressed() -> void:
 	Pause.close()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	get_tree().change_scene_to_file("res://app/main/main.tscn")
+	get_tree().change_scene_to_file("res://app/main.tscn")
 
 
 func _on_quit_pressed() -> void:
