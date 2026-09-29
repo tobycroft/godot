@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://game/3d/map/player.gd" id="1_player"]
-[ext_resource type="PackedScene" path="res://game/3d/map/models/character.glb" id="2_model"]
+[ext_resource type="Script" path="res://game/running_man/map/player.gd" id="1_player"]
+[ext_resource type="PackedScene" path="res://game/running_man/map/models/character.glb" id="2_model"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.25

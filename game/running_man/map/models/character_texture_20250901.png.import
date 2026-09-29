@@ -14,7 +14,7 @@ generator_parameters={
 
 [deps]
 
-source_file="res://game/3d/map/models/character_texture_20250901.png"
+source_file="res://game/running_man/map/models/character_texture_20250901.png"
 dest_files=["res://.godot/imported/character_texture_20250901.png-b7c46cf581112ff5931457a41d8033f7.s3tc.ctex"]
 
 [params]

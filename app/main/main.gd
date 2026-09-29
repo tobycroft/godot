@@ -1,13 +1,13 @@
 extends Control
-## 主菜单脚本：2D 入口暂留，3D 入口进入三维世界场景。
+## 主菜单脚本：2D 入口暂留，Running Man 入口进入三维跑酷场景。
 
 @onready var btn_2d: Button = $Start2DButton
-@onready var btn_3d: Button = $Start3DButton
+@onready var btn_running_man: Button = $StartRunningManButton
 @onready var btn_quit: Button = $QuitButton
 
 
 func _ready() -> void:
-	btn_3d.pressed.connect(_on_3d_pressed)
+	btn_running_man.pressed.connect(_on_running_man_pressed)
 	btn_quit.pressed.connect(_on_quit_pressed)
 	# 2D 入口先留着，后续接入 2D 场景
 	btn_2d.pressed.connect(_on_2d_pressed)
@@ -18,8 +18,8 @@ func _on_2d_pressed() -> void:
 	pass
 
 
-func _on_3d_pressed() -> void:
-	get_tree().change_scene_to_file("res://game/3d/runner/runner.tscn")
+func _on_running_man_pressed() -> void:
+	get_tree().change_scene_to_file("res://game/running_man/runner/runner.tscn")
 
 
 func _on_quit_pressed() -> void:

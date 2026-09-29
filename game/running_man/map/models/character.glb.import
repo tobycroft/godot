@@ -8,7 +8,7 @@ path="res://.godot/imported/character.glb-0de89031b66f639b9aa9c70b9aa246c4.scn"
 
 [deps]
 
-source_file="res://game/3d/map/models/character.glb"
+source_file="res://game/running_man/map/models/character.glb"
 dest_files=["res://.godot/imported/character.glb-0de89031b66f639b9aa9c70b9aa246c4.scn"]
 
 [params]

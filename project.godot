@@ -17,7 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-Pause="*res://game/3d/pause/pause.gd"
+Pause="*res://game/running_man/pause/pause.gd"
 
 [display]
 

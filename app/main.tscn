@@ -68,7 +68,7 @@ grow_horizontal = 2
 grow_vertical = 2
 text = "2D"
 
-[node name="Start3DButton" type="Button" parent="." unique_id=1465777538]
+[node name="StartRunningManButton" type="Button" parent="." unique_id=1465777538]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -81,7 +81,7 @@ offset_right = 206.0
 offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "3D"
+text = "Running Man"
 
 [node name="SettingsButton" type="Button" parent="." unique_id=947361388]
 layout_mode = 1
