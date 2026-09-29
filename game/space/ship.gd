@@ -2,7 +2,7 @@ class_name Ship
 extends Node3D
 ## 宇宙飞船控制器（含模型）。
 ## 鼠标拖拽 / 方向键控制俯仰(pitch)与偏航(yaw)，转向时机身轻微滚转(bank)增强飞行感。
-## 飞船本体保持在原点附近，真正的环境流动由 Space 场景负责，从而营造 3D 空间飞行错觉。
+## 实际位移（沿机头方向）由 Space 场景负责；die() 用于被小行星撞毁时停摆并隐藏机体。
 
 const YAW_SPEED := 1.8
 const PITCH_SPEED := 1.3
@@ -43,3 +43,11 @@ func _process(delta: float) -> void:
 	# 转向时机身自然倾斜（bank）
 	var target_roll := -yaw * 0.45
 	visual.rotation.z = lerp_angle(visual.rotation.z, target_roll, ROLL_SPEED * delta)
+
+
+## 被小行星撞毁：停摆输入与旋转，并隐藏机体模型。
+func die() -> void:
+	set_process(false)
+	set_process_input(false)
+	if has_node("Visual"):
+		$Visual.visible = false
