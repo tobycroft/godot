@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://beh861o8w72kr"
-path.s3tc="res://.godot/imported/character_texture_20250901.png-701cc6fcc21b8368bf9f87980c3002cb.s3tc.ctex"
+path.s3tc="res://.godot/imported/character_texture_20250901.png-62578ee7b919b1963376cb3884e745d6.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -15,7 +15,7 @@ generator_parameters={
 [deps]
 
 source_file="res://app/game/world/models/character_texture_20250901.png"
-dest_files=["res://.godot/imported/character_texture_20250901.png-701cc6fcc21b8368bf9f87980c3002cb.s3tc.ctex"]
+dest_files=["res://.godot/imported/character_texture_20250901.png-62578ee7b919b1963376cb3884e745d6.s3tc.ctex"]
 
 [params]
 
