@@ -3,10 +3,6 @@ extends Node3D
 ## 飞船沿机头方向实际飞行；Shift 加速 / Ctrl 减速；撞上小行星则飞船爆炸。
 ## Esc 由 Pause 自动加载接管（弹出暂停菜单，可返回主菜单 / 退出）。
 
-const MIN_SPEED := 8.0
-const MAX_SPEED := 90.0
-const BASE_SPEED := 28.0
-const ACCEL := 26.0
 const SHIP_RADIUS := 1.4
 
 @onready var ship: Node3D = $Ship
@@ -15,7 +11,6 @@ const SHIP_RADIUS := 1.4
 @onready var speed_label: Label = $UI/SpeedLabel
 @onready var game_over: Control = $UI/GameOver
 
-var _speed := BASE_SPEED
 var _dead := false
 
 
@@ -30,22 +25,15 @@ func _process(delta: float) -> void:
 	if _dead:
 		return
 
-	# 加速 / 减速
-	if Input.is_key_pressed(KEY_SHIFT):
-		_speed = min(_speed + ACCEL * delta, MAX_SPEED)
-	if Input.is_key_pressed(KEY_CTRL):
-		_speed = max(_speed - ACCEL * delta, MIN_SPEED)
-
-	# 沿机头方向实际移动飞船
-	var fwd := -ship.global_transform.basis.z
-	ship.global_transform.origin += fwd * _speed * delta
+	# 飞船自身负责带惯性的推进与转向，这里只跟随其位姿刷新环境
+	var t := ship.global_transform
 
 	# 让星空 / 小行星围绕飞船流动
-	star_field.update(ship.global_transform, delta)
-	asteroid_field.update(ship.global_transform, delta)
+	star_field.update(t, delta)
+	asteroid_field.update(t, delta)
 
 	# 碰撞检测
-	if asteroid_field.collides(ship.global_transform.origin, SHIP_RADIUS):
+	if asteroid_field.collides(t.origin, SHIP_RADIUS):
 		_explode()
 		return
 
@@ -53,7 +41,7 @@ func _process(delta: float) -> void:
 
 
 func _update_speed_label() -> void:
-	speed_label.text = "速度: %d" % _speed
+	speed_label.text = "速度: %d" % ship.get_speed()
 
 
 func _explode() -> void:

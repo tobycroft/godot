@@ -1,6 +1,6 @@
 extends Node3D
-## 小行星场：在飞船周围的体积内维护一组小行星，随飞船飞行循环补充到前方，
-## 随机的位置 / 大小 / 自转让飞行有穿梭移动感；并提供碰撞检测。
+## 小行星场：程序化生成不规则岩石外观的小行星，围绕飞船循环补充；
+## 部分小行星带辐射微光（自发光 + 点光源）。并提供碰撞检测。
 
 const COUNT := 46
 const RANGE := 220.0
@@ -8,26 +8,47 @@ const RECYCLE_BEHIND := 12.0
 const MIN_SCALE := 1.2
 const MAX_SCALE := 4.5
 const SPAWN_CLEAR := 14.0
+const GLOW_CHANCE := 0.3
+const MAX_GLOW_LIGHTS := 5
+
+const GLOW_COLORS := [
+	Color(0.35, 1.0, 0.85),
+	Color(0.45, 0.8, 1.0),
+	Color(0.75, 0.5, 1.0),
+	Color(1.0, 0.75, 0.35),
+]
 
 var _asteroids: Array[MeshInstance3D] = []
 var _spin: Array[Vector3] = []
+var _glow_lights := 0
 
 
 func _ready() -> void:
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.55, 0.52, 0.5)
-	mat.roughness = 0.95
-	mat.metallic = 0.0
-
 	for i in COUNT:
 		var m := MeshInstance3D.new()
-		var sphere := SphereMesh.new()
-		sphere.radius = 1.0
-		sphere.height = 2.0
-		sphere.radial_segments = 10
-		sphere.rings = 6
-		m.mesh = sphere
+		m.mesh = _create_rock_mesh(6, 9, 0.38)
+
+		var mat := StandardMaterial3D.new()
+		mat.roughness = randf_range(0.85, 1.0)
+		mat.metallic = 0.05
+		if randf() < GLOW_CHANCE:
+			var c: Color = GLOW_COLORS[randi() % GLOW_COLORS.size()]
+			mat.albedo_color = Color(0.22, 0.26, 0.3)
+			mat.emission_enabled = true
+			mat.emission = c
+			mat.emission_energy_multiplier = randf_range(1.5, 3.0)
+			if _glow_lights < MAX_GLOW_LIGHTS:
+				_glow_lights += 1
+				var light := OmniLight3D.new()
+				light.light_color = c
+				light.light_energy = 1.6
+				light.omni_range = 34.0
+				m.add_child(light)
+		else:
+			var g := randf_range(0.35, 0.6)
+			mat.albedo_color = Color(g * 1.05, g, g * randf_range(0.85, 1.0))
 		m.material_override = mat
+
 		_respawn(m, Vector3.ZERO, Vector3(0, 0, -1), true)
 		add_child(m)
 		_asteroids.append(m)
@@ -57,6 +78,37 @@ func collides(center: Vector3, ship_radius: float) -> bool:
 		if m.position.distance_to(center) < ship_radius + m.scale.x * 0.9:
 			return true
 	return false
+
+
+## 生成不规则岩石网格：在球面上叠加正弦起伏与随机扰动，形成凹凸岩块。
+func _create_rock_mesh(rings: int, radial: int, amp: float) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for r in range(rings + 1):
+		var phi := float(r) / rings * PI
+		for s in range(radial + 1):
+			var theta := float(s) / radial * TAU
+			var n := Vector3(sin(phi) * cos(theta), cos(phi), sin(phi) * sin(theta))
+			var d := 1.0 + amp * (
+				sin(theta * 3.0 + phi * 2.0) * 0.35
+				+ sin(phi * 5.0 - theta) * 0.25
+				+ randf_range(-0.35, 0.35)
+			)
+			st.add_vertex(n * d)
+	for r in range(rings):
+		for s in range(radial):
+			var i0 := r * (radial + 1) + s
+			var i1 := i0 + 1
+			var i2 := i0 + (radial + 1)
+			var i3 := i2 + 1
+			st.add_index(i0)
+			st.add_index(i2)
+			st.add_index(i1)
+			st.add_index(i1)
+			st.add_index(i2)
+			st.add_index(i3)
+	st.generate_normals()
+	return st.commit()
 
 
 func _respawn(m: MeshInstance3D, center: Vector3, fwd: Vector3, initial: bool) -> void:

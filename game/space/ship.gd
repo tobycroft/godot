@@ -1,19 +1,47 @@
 class_name Ship
 extends Node3D
 ## 宇宙飞船控制器（含模型）。
-## 鼠标拖拽 / 方向键控制俯仰(pitch)与偏航(yaw)，转向时机身轻微滚转(bank)增强飞行感。
-## 实际位移（沿机头方向）由 Space 场景负责；die() 用于被小行星撞毁时停摆并隐藏机体。
+## 带惯性的飞行手感：角速度有加速与回中过程（不是瞬间转向），
+## 速度由推力与阻力决定，转弯时保留侧向惯性（漂移感），机身随实际转向率倾斜。
+## Shift 加大油门 / Ctrl 减小油门；撞毁时由 die() 停摆并隐藏机体。
 
-const YAW_SPEED := 1.8
-const PITCH_SPEED := 1.3
-const ROLL_SPEED := 2.5
-const MOUSE_SENS := 0.0025
+const MAX_THRUST := 90.0
+const DRAG := 1.6
+const LATERAL_DRAG := 1.3
+const MIN_THROTTLE := 0.15
+const MAX_THROTTLE := 1.0
+const THROTTLE_RATE := 0.6
+const MAX_SPEED := 60.0
+
+const TURN_RATE := 1.6
+const PITCH_TURN_RATE := 1.2
+const ANG_ACCEL := 3.0
+const MOUSE_GAIN := 0.006
+const MOUSE_DECAY := 2.5
+
+const CAM_BASE_Z := 6.5
+const CAM_MAX_Z := 8.6
+const FOV_BASE := 70.0
+const FOV_MAX := 84.0
 
 @onready var visual: Node3D = $Visual
+@onready var camera: Camera3D = $Camera3D
+
+var _velocity := Vector3.ZERO
+var _throttle := 0.45
+var _yaw_rate := 0.0
+var _pitch_rate := 0.0
+var _mouse_yaw := 0.0
+var _mouse_pitch := 0.0
 
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_velocity = -global_transform.basis.z * 24.0
+
+
+func get_speed() -> float:
+	return _velocity.length()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -21,28 +49,62 @@ func _unhandled_input(event: InputEvent) -> void:
 		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotate_object_local(Vector3.UP, -event.relative.x * MOUSE_SENS)
-		rotate_object_local(Vector3.RIGHT, -event.relative.y * MOUSE_SENS)
+		_mouse_yaw = clampf(_mouse_yaw - event.relative.x * MOUSE_GAIN, -1.0, 1.0)
+		_mouse_pitch = clampf(_mouse_pitch - event.relative.y * MOUSE_GAIN, -1.0, 1.0)
 
 
 func _process(delta: float) -> void:
-	var yaw := 0.0
-	var pitch := 0.0
+	# 鼠标杆量自然回中
+	_mouse_yaw = move_toward(_mouse_yaw, 0.0, MOUSE_DECAY * delta)
+	_mouse_pitch = move_toward(_mouse_pitch, 0.0, MOUSE_DECAY * delta)
+
+	# 油门：Shift 加速 / Ctrl 减速
+	if Input.is_key_pressed(KEY_SHIFT):
+		_throttle = min(_throttle + THROTTLE_RATE * delta, MAX_THROTTLE)
+	if Input.is_key_pressed(KEY_CTRL):
+		_throttle = max(_throttle - THROTTLE_RATE * delta, MIN_THROTTLE)
+
+	# 目标角速度（键盘 + 鼠标），带惯性加速与回中
+	var target_yaw := 0.0
+	var target_pitch := 0.0
 	if Input.is_action_pressed("move_left"):
-		yaw += 1.0
+		target_yaw += 1.0
 	if Input.is_action_pressed("move_right"):
-		yaw -= 1.0
+		target_yaw -= 1.0
 	if Input.is_action_pressed("move_forward"):
-		pitch -= 1.0
+		target_pitch -= 1.0
 	if Input.is_action_pressed("move_back"):
-		pitch += 1.0
+		target_pitch += 1.0
+	target_yaw = clampf(target_yaw + _mouse_yaw, -1.0, 1.0)
+	target_pitch = clampf(target_pitch + _mouse_pitch, -1.0, 1.0)
+	_yaw_rate = move_toward(_yaw_rate, target_yaw * TURN_RATE, ANG_ACCEL * delta)
+	_pitch_rate = move_toward(_pitch_rate, target_pitch * PITCH_TURN_RATE, ANG_ACCEL * delta)
 
-	rotate_object_local(Vector3.UP, yaw * YAW_SPEED * delta)
-	rotate_object_local(Vector3.RIGHT, pitch * PITCH_SPEED * delta)
+	rotate_object_local(Vector3.UP, _yaw_rate * delta)
+	rotate_object_local(Vector3.RIGHT, _pitch_rate * delta)
 
-	# 转向时机身自然倾斜（bank）
-	var target_roll := -yaw * 0.45
-	visual.rotation.z = lerp_angle(visual.rotation.z, target_roll, ROLL_SPEED * delta)
+	# 机身随实际转向率倾斜（bank）
+	visual.rotation.z = lerp_angle(visual.rotation.z, -_yaw_rate * 0.5, 3.0 * delta)
+
+	# 推进与阻力：转弯时保留侧向惯性，产生漂移感
+	var fwd := -global_transform.basis.z
+	_velocity += fwd * (_throttle * MAX_THRUST) * delta
+	_velocity -= _velocity * DRAG * delta
+	var along := fwd * _velocity.dot(fwd)
+	var lateral := _velocity - along
+	_velocity = along + lateral * max(1.0 - LATERAL_DRAG * delta, 0.0)
+	if _velocity.length() > MAX_SPEED:
+		_velocity = _velocity.normalized() * MAX_SPEED
+	global_transform.origin += _velocity * delta
+
+	_update_camera(delta)
+
+
+func _update_camera(delta: float) -> void:
+	var ratio := clampf((get_speed() - 8.0) / (MAX_SPEED - 8.0), 0.0, 1.0)
+	camera.fov = lerpf(FOV_BASE, FOV_MAX, ratio)
+	var target_z := lerpf(CAM_BASE_Z, CAM_MAX_Z, ratio)
+	camera.position.z = lerpf(camera.position.z, target_z, 3.0 * delta)
 
 
 ## 被小行星撞毁：停摆输入与旋转，并隐藏机体模型。
