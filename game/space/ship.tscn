@@ -18,8 +18,9 @@ emission_enabled = true
 emission = Color(1, 0.5, 0.1, 1)
 emission_energy_multiplier = 3.0
 
-[sub_resource type="ConeMesh" id="fuselage_mesh"]
-radius = 0.45
+[sub_resource type="CylinderMesh" id="fuselage_mesh"]
+top_radius = 0.0
+bottom_radius = 0.45
 height = 2.4
 radial_segments = 16
 

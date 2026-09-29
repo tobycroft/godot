@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bs4d87x544bse"
-path="res://.godot/imported/character.glb-0de89031b66f639b9aa9c70b9aa246c4.scn"
+path="res://.godot/imported/character.glb-e3933dc29e04215ca012824b313c9e04.scn"
 
 [deps]
 
 source_file="res://game/running_man/map/models/character.glb"
-dest_files=["res://.godot/imported/character.glb-0de89031b66f639b9aa9c70b9aa246c4.scn"]
+dest_files=["res://.godot/imported/character.glb-e3933dc29e04215ca012824b313c9e04.scn"]
 
 [params]
 
