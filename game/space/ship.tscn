@@ -1,0 +1,76 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://game/space/ship.gd" id="1_ship"]
+
+[sub_resource type="StandardMaterial3D" id="body_mat"]
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+metallic = 0.6
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="cockpit_mat"]
+albedo_color = Color(0.1, 0.8, 1.0, 1)
+metallic = 0.2
+roughness = 0.1
+
+[sub_resource type="StandardMaterial3D" id="engine_mat"]
+albedo_color = Color(0, 0, 0, 1)
+emission_enabled = true
+emission = Color(1, 0.5, 0.1, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="ConeMesh" id="fuselage_mesh"]
+radius = 0.45
+height = 2.4
+radial_segments = 16
+
+[sub_resource type="SphereMesh" id="cockpit_mesh"]
+radius = 0.28
+height = 0.56
+
+[sub_resource type="BoxMesh" id="wing_mesh"]
+size = Vector3(1.7, 0.08, 0.6)
+
+[sub_resource type="CylinderMesh" id="engine_mesh"]
+radius = 0.14
+height = 0.35
+radial_segments = 12
+
+[node name="Ship" type="Node3D"]
+script = ExtResource("1_ship")
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Fuselage" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
+mesh = SubResource("fuselage_mesh")
+material_override = SubResource("body_mat")
+
+[node name="Cockpit" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, -0.5)
+mesh = SubResource("cockpit_mesh")
+material_override = SubResource("cockpit_mat")
+
+[node name="WingLeft" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.95, 0, 0.15)
+mesh = SubResource("wing_mesh")
+material_override = SubResource("body_mat")
+
+[node name="WingRight" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.95, 0, 0.15)
+mesh = SubResource("wing_mesh")
+material_override = SubResource("body_mat")
+
+[node name="EngineLeft" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, -0.25, 0, 1.05)
+mesh = SubResource("engine_mesh")
+material_override = SubResource("engine_mat")
+
+[node name="EngineRight" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.25, 0, 1.05)
+mesh = SubResource("engine_mesh")
+material_override = SubResource("engine_mat")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 6.5)
+fov = 70.0
+current = true
