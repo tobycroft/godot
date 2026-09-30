@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://game/terrain/terrain.gd" id="1_terrain"]
 [ext_resource type="Shader" path="res://game/terrain/water.gdshader" id="2_water"]
-[ext_resource type="PackedScene" path="res://demo/components/Player.tscn" id="3_player"]
 [ext_resource type="Script" path="res://game/terrain/terrain_player.gd" id="4_tplayer"]
+[ext_resource type="Script" path="res://demo/src/CameraManager.gd" id="5_cam"]
+[ext_resource type="Script" path="res://game/terrain/toon_character.gd" id="6_toon"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.22, 0.42, 0.72, 1)
@@ -35,6 +36,13 @@ size = Vector2(1024, 1024)
 [sub_resource type="ShaderMaterial" id="water_mat"]
 shader = ExtResource("2_water")
 
+[sub_resource type="SphereShape3D" id="arm_shape"]
+
+[sub_resource type="CapsuleShape3D" id="body_shape"]
+height = 1.5
+
+[sub_resource type="SeparationRayShape3D" id="ray_shape"]
+
 [node name="TerrainScene" type="Node3D"]
 script = ExtResource("1_terrain")
 
@@ -53,9 +61,37 @@ cast_shadow = 0
 mesh = SubResource("water_mesh")
 material_override = SubResource("water_mat")
 
-[node name="Player" parent="." instance=ExtResource("3_player")]
+[node name="Player" type="CharacterBody3D" parent="."]
+collision_layer = 2
 script = ExtResource("4_tplayer")
 MOVE_SPEED = 14.0
+
+[node name="CameraManager" type="Node3D" parent="Player"]
+script = ExtResource("5_cam")
+
+[node name="Arm" type="SpringArm3D" parent="Player/CameraManager"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 0.906308, 0.422618, 0, -0.422618, 0.906308, 0, 2.32515, -0.0321627)
+shape = SubResource("arm_shape")
+spring_length = 6.0
+margin = 0.5
+
+[node name="Camera3D" type="Camera3D" parent="Player/CameraManager/Arm"]
+unique_name_in_owner = true
+near = 0.25
+far = 16384.0
+current = true
+
+[node name="CollisionShapeBody" type="CollisionShape3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("body_shape")
+
+[node name="CollisionShapeRay" type="CollisionShape3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 1, 0)
+shape = SubResource("ray_shape")
+
+[node name="Body" type="Node3D" parent="Player"]
+script = ExtResource("6_toon")
 
 [node name="UI" type="CanvasLayer" parent="."]
 
