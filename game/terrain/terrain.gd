@@ -154,6 +154,7 @@ func _apply_brush(dir: float, delta: float) -> void:
 			edited = true
 	if edited:
 		_terrain.data.update_maps(0, true, false) # 0 = TYPE_HEIGHT，刷新高度图网格
+		_terrain.get_collision().update(true) # 重建动态碰撞体，使挖/填后的地形可站立
 
 
 func _has_saved_terrain() -> bool:
