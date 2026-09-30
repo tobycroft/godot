@@ -1,132 +1,103 @@
+class_name AsteroidField
 extends Node3D
-## 小行星场：程序化生成不规则岩石外观的小行星，围绕飞船循环补充；
-## 部分小行星带辐射微光（自发光 + 点光源）。并提供碰撞检测。
+## 小行星场：只负责"批量生成 + 循环补充 + 查询 / 结算"，
+## 单颗小行星的一切行为都封装在 Asteroid 类里，新增小行星直接 new Asteroid 即可。
 
 const COUNT := 46
 const RANGE := 220.0
 const RECYCLE_BEHIND := 12.0
-const MIN_SCALE := 1.2
-const MAX_SCALE := 4.5
 const SPAWN_CLEAR := 14.0
-const GLOW_CHANCE := 0.3
 const MAX_GLOW_LIGHTS := 5
 
-const GLOW_COLORS := [
-	Color(0.35, 1.0, 0.85),
-	Color(0.45, 0.8, 1.0),
-	Color(0.75, 0.5, 1.0),
-	Color(1.0, 0.75, 0.35),
-]
-
-var _asteroids: Array[MeshInstance3D] = []
-var _spin: Array[Vector3] = []
-var _glow_lights := 0
+var _asteroids: Array[Asteroid] = []
+var _center := Vector3.ZERO
+var _fwd := Vector3(0.0, 0.0, -1.0)
 
 
 func _ready() -> void:
+	Asteroid.shapes() # 提前触发外形生成 / 读缓存
 	for i in COUNT:
-		var m := MeshInstance3D.new()
-		m.mesh = _create_rock_mesh(6, 9, 0.38)
-
-		var mat := StandardMaterial3D.new()
-		mat.roughness = randf_range(0.85, 1.0)
-		mat.metallic = 0.05
-		if randf() < GLOW_CHANCE:
-			var c: Color = GLOW_COLORS[randi() % GLOW_COLORS.size()]
-			mat.albedo_color = Color(0.22, 0.26, 0.3)
-			mat.emission_enabled = true
-			mat.emission = c
-			mat.emission_energy_multiplier = randf_range(1.5, 3.0)
-			if _glow_lights < MAX_GLOW_LIGHTS:
-				_glow_lights += 1
-				var light := OmniLight3D.new()
-				light.light_color = c
-				light.light_energy = 1.6
-				light.omni_range = 34.0
-				m.add_child(light)
-		else:
-			var g := randf_range(0.35, 0.6)
-			mat.albedo_color = Color(g * 1.05, g, g * randf_range(0.85, 1.0))
-		m.material_override = mat
-
-		_respawn(m, Vector3.ZERO, Vector3(0, 0, -1), true)
-		add_child(m)
-		_asteroids.append(m)
-		_spin.append(Vector3(
-			randf_range(-0.6, 0.6),
-			randf_range(-0.6, 0.6),
-			randf_range(-0.6, 0.6)
-		))
+		var a := Asteroid.new()
+		a.scatter(_center, _fwd, true, RANGE, SPAWN_CLEAR + 4.0)
+		add_child(a)
+		a.set_glow_light(a.wants_glow and _glow_count() < MAX_GLOW_LIGHTS)
+		_asteroids.append(a)
 
 
 ## 每帧根据飞船位姿循环小行星（落在后方的补充到前方），并自转。
 func update(ship_t: Transform3D, delta: float) -> void:
-	var center := ship_t.origin
-	var fwd := -ship_t.basis.z
-	for i in _asteroids.size():
-		var m := _asteroids[i]
-		var rel := m.position - center
-		if rel.dot(fwd) < -RECYCLE_BEHIND or rel.length() > RANGE * 1.6:
-			_respawn(m, center, fwd, false)
+	_center = ship_t.origin
+	_fwd = -ship_t.basis.z
+	for a in _asteroids:
+		var rel := a.position - _center
+		if rel.dot(_fwd) < -RECYCLE_BEHIND or rel.length() > RANGE * 1.6:
+			_recycle(a)
 		else:
-			m.rotation += _spin[i] * delta
+			a.rotation += a.spin * delta
 
 
-## 飞船（center）是否撞上任一小行星；半径随小行星体积增大。
-func collides(center: Vector3, ship_radius: float) -> bool:
-	for m in _asteroids:
-		if m.position.distance_to(center) < ship_radius + m.scale.x * 0.9:
-			return true
-	return false
+func asteroids() -> Array[Asteroid]:
+	return _asteroids
 
 
-## 生成不规则岩石网格：在球面上叠加正弦起伏与随机扰动，形成凹凸岩块。
-func _create_rock_mesh(rings: int, radial: int, amp: float) -> ArrayMesh:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for r in range(rings + 1):
-		var phi := float(r) / rings * PI
-		for s in range(radial + 1):
-			var theta := float(s) / radial * TAU
-			var n := Vector3(sin(phi) * cos(theta), cos(phi), sin(phi) * sin(theta))
-			var d := 1.0 + amp * (
-				sin(theta * 3.0 + phi * 2.0) * 0.35
-				+ sin(phi * 5.0 - theta) * 0.25
-				+ randf_range(-0.35, 0.35)
-			)
-			st.add_vertex(n * d)
-	for r in range(rings):
-		for s in range(radial):
-			var i0 := r * (radial + 1) + s
-			var i1 := i0 + 1
-			var i2 := i0 + (radial + 1)
-			var i3 := i2 + 1
-			st.add_index(i0)
-			st.add_index(i2)
-			st.add_index(i1)
-			st.add_index(i1)
-			st.add_index(i2)
-			st.add_index(i3)
-	st.generate_normals()
-	return st.commit()
+## 飞船（center）是否撞上小行星；返回被撞的那颗（没撞到返回 null）。
+func hit_test(center: Vector3, ship_radius: float) -> Asteroid:
+	for a in _asteroids:
+		if a.position.distance_to(center) < ship_radius + a.radius:
+			return a
+	return null
 
 
-func _respawn(m: MeshInstance3D, center: Vector3, fwd: Vector3, initial: bool) -> void:
-	var s := randf_range(MIN_SCALE, MAX_SCALE)
-	m.scale = Vector3(s, s, s)
-	var dir := (fwd + _lateral_unit(fwd) * randf_range(0.2, 0.9)).normalized()
-	var dist := RANGE
-	if initial:
-		dist = randf_range(SPAWN_CLEAR + 4.0, RANGE)
-	m.position = center + dir * dist
-	m.rotation = Vector3(randf_range(0, TAU), randf_range(0, TAU), randf_range(0, TAU))
+## 某个点是否落在小行星体内（静态判定）。
+func hit_at(pos: Vector3, radius: float) -> Asteroid:
+	for a in _asteroids:
+		if a.position.distance_to(pos) < radius + a.radius:
+			return a
+	return null
 
 
-func _lateral_unit(fwd: Vector3) -> Vector3:
-	var up := Vector3.UP
-	if absf(fwd.dot(up)) > 0.98:
-		up = Vector3.RIGHT
-	var right := fwd.cross(up).normalized()
-	var real_up := right.cross(fwd).normalized()
-	var ang := randf_range(0.0, TAU)
-	return (right * cos(ang) + real_up * sin(ang)).normalized()
+## 线段判定：高速子弹一帧能走好几米，用"上一帧位置 -> 当前位置"这条线段来测，避免穿透。
+func hit_segment(from: Vector3, to: Vector3, radius: float) -> Asteroid:
+	var seg := to - from
+	var len2 := seg.length_squared()
+	for a in _asteroids:
+		var rel := a.position - from
+		var k := 0.0
+		if len2 > 0.0001:
+			k = clampf(rel.dot(seg) / len2, 0.0, 1.0)
+		if (from + seg * k).distance_to(a.position) <= radius + a.radius:
+			return a
+	return null
+
+
+## 结算伤害：命中溅火花，打爆则回收并炸开。
+func damage(a: Asteroid, amount: float) -> void:
+	if a.take_damage(amount):
+		destroy(a, 0.5 + a.scale.x * 0.3)
+	else:
+		Explosion.spawn(get_parent() as Node3D, a.position, 0.16)
+
+
+## 被打爆：重新投放并触发爆炸。
+func destroy(a: Asteroid, power: float) -> void:
+	var at: Vector3 = a.position
+	_recycle(a)
+	Explosion.spawn(get_parent() as Node3D, at, power)
+
+
+## 飞船撞击后把这颗挪走（不扣小行星血量，撞机是飞船吃亏）。
+func recycle(a: Asteroid) -> void:
+	_recycle(a)
+
+
+func _recycle(a: Asteroid) -> void:
+	a.scatter(_center, _fwd, false, RANGE, SPAWN_CLEAR + 4.0)
+	a.set_glow_light(a.wants_glow and _glow_count() < MAX_GLOW_LIGHTS)
+
+
+func _glow_count() -> int:
+	var n := 0
+	for a in _asteroids:
+		if a.has_node("Glow"):
+			n += 1
+	return n

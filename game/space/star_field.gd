@@ -1,3 +1,4 @@
+class_name StarField
 extends Node3D
 ## 星空：MultiMesh 在飞船周围的体积内散布大量发光星点，
 ## 随飞船朝任意方向飞行而循环补充到前方，营造星空流动感。

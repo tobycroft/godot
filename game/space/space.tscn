@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://game/space/space.gd" id="1_space"]
 [ext_resource type="PackedScene" path="res://game/space/ship.tscn" id="2_ship"]
 [ext_resource type="Script" path="res://game/space/star_field.gd" id="3_star"]
 [ext_resource type="Script" path="res://game/space/asteroid_field.gd" id="4_aster"]
+[ext_resource type="Script" path="res://game/space/weapons.gd" id="5_weapons"]
 
 [sub_resource type="Environment" id="env"]
 background_mode = 1
@@ -40,7 +41,17 @@ script = ExtResource("4_aster")
 
 [node name="Ship" parent="." instance=ExtResource("2_ship")]
 
+[node name="Weapons" type="Node3D" parent="."]
+script = ExtResource("5_weapons")
+
 [node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="SpeedLabel" type="Label" parent="UI"]
 offset_left = 14.0
@@ -52,6 +63,8 @@ theme_override_colors/font_color = Color(0.8, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 24
 
 [node name="HintLabel" type="Label" parent="UI"]
+layout_mode = 1
+anchors_preset = 12
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
@@ -62,13 +75,89 @@ offset_right = 240.0
 offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 0
-text = "Shift 加速 · Ctrl 减速 · 鼠标/方向键转向 · Esc 暂停"
+text = "Shift 加速 · Ctrl 减速 · 鼠标/方向键转向 · C 机炮 · 空格 导弹 · Esc 暂停"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 1)
 theme_override_font_sizes/font_size = 18
 
+[node name="HUD" type="Control" parent="UI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 26.0
+offset_top = -118.0
+offset_right = 346.0
+offset_bottom = -26.0
+grow_horizontal = 1
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="HPText" type="Label" parent="UI/HUD"]
+layout_mode = 1
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 320.0
+offset_bottom = 22.0
+text = "血量  100 / 100"
+theme_override_colors/font_color = Color(0.78, 0.94, 1, 1)
+theme_override_font_sizes/font_size = 18
+
+[node name="HPBack" type="ColorRect" parent="UI/HUD"]
+layout_mode = 1
+offset_left = 0.0
+offset_top = 24.0
+offset_right = 300.0
+offset_bottom = 46.0
+color = Color(0.06, 0.08, 0.12, 0.82)
+
+[node name="HPFill" type="ColorRect" parent="UI/HUD"]
+layout_mode = 1
+offset_left = 0.0
+offset_top = 24.0
+offset_right = 300.0
+offset_bottom = 46.0
+color = Color(0.45, 0.86, 0.22, 1)
+
+[node name="ArmorText" type="Label" parent="UI/HUD"]
+layout_mode = 1
+offset_left = 0.0
+offset_top = 52.0
+offset_right = 320.0
+offset_bottom = 72.0
+text = "护甲  0"
+theme_override_colors/font_color = Color(0.7, 0.86, 1, 1)
+theme_override_font_sizes/font_size = 16
+
+[node name="ArmorBack" type="ColorRect" parent="UI/HUD"]
+layout_mode = 1
+offset_left = 0.0
+offset_top = 74.0
+offset_right = 240.0
+offset_bottom = 90.0
+color = Color(0.06, 0.08, 0.12, 0.82)
+
+[node name="ArmorFill" type="ColorRect" parent="UI/HUD"]
+layout_mode = 1
+offset_left = 0.0
+offset_top = 74.0
+offset_right = 240.0
+offset_bottom = 90.0
+color = Color(0.32, 0.68, 1, 1)
+
+[node name="HitFlash" type="ColorRect" parent="UI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.22, 0.16, 0)
+
 [node name="GameOver" type="Control" parent="UI"]
 visible = false
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -76,23 +165,26 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Dim" type="ColorRect" parent="UI/GameOver"]
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 color = Color(0, 0, 0, 0.55)
 
 [node name="VBox" type="VBoxContainer" parent="UI/GameOver"]
+layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = -90.0
-offset_right = 160.0
-offset_bottom = 90.0
+offset_left = -175.0
+offset_top = -110.0
+offset_right = 175.0
+offset_bottom = 110.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 18

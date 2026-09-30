@@ -2,7 +2,9 @@ class_name Ship
 extends Node3D
 ## 宇宙飞船控制器（含模型）。
 ## 带惯性的飞行手感：角速度有加速与回中过程（不是瞬间转向），
-## 速度由推力与阻力决定，转弯时保留侧向惯性（漂移感），机身随实际转向率倾斜。
+## 速度由推力与阻力决定，转弯时保留侧向惯性（漂移感）。
+## 镜头逻辑：相机挂在 Body 下，与机体共用同一滚转角 —— 转弯时是"整个画面"
+## 跟着飞船一起倾转，机翼始终与画面水平线平行，而不是飞船在画面里独自翻滚。
 ## Shift 加大油门 / Ctrl 减小油门；撞毁时由 die() 停摆并隐藏机体。
 
 const MAX_THRUST := 90.0
@@ -19,13 +21,19 @@ const ANG_ACCEL := 3.0
 const MOUSE_GAIN := 0.006
 const MOUSE_DECAY := 2.5
 
-const CAM_BASE_Z := 6.5
-const CAM_MAX_Z := 8.6
+# 滚转：协调转弯（左转压左翼、右转压右翼），上限约 49°
+const BANK_FACTOR := 0.55
+const MAX_BANK := 0.85
+const BANK_SMOOTH := 3.4
+
+const CAM_BASE_Z := 7.6
+const CAM_MAX_Z := 9.8
 const FOV_BASE := 70.0
 const FOV_MAX := 84.0
 
-@onready var visual: Node3D = $Visual
-@onready var camera: Camera3D = $Camera3D
+@onready var body: Node3D = $Body
+@onready var visual: ShipModel = $Body/Visual
+@onready var camera: Camera3D = $Body/Camera3D
 
 var _velocity := Vector3.ZERO
 var _throttle := 0.45
@@ -33,6 +41,7 @@ var _yaw_rate := 0.0
 var _pitch_rate := 0.0
 var _mouse_yaw := 0.0
 var _mouse_pitch := 0.0
+var _bank := 0.0
 
 
 func _ready() -> void:
@@ -42,6 +51,11 @@ func _ready() -> void:
 
 func get_speed() -> float:
 	return _velocity.length()
+
+
+## 弹药初速要叠加飞船速度，所以对外暴露当前速度矢量。
+func get_velocity() -> Vector3:
+	return _velocity
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -83,8 +97,10 @@ func _process(delta: float) -> void:
 	rotate_object_local(Vector3.UP, _yaw_rate * delta)
 	rotate_object_local(Vector3.RIGHT, _pitch_rate * delta)
 
-	# 机身随实际转向率倾斜（bank）
-	visual.rotation.z = lerp_angle(visual.rotation.z, -_yaw_rate * 0.5, 3.0 * delta)
+	# 机体（连同相机）一起滚转：整个画面随飞船倾转
+	_bank = lerpf(_bank, clampf(_yaw_rate * BANK_FACTOR, -MAX_BANK, MAX_BANK), BANK_SMOOTH * delta)
+	body.rotation.z = _bank
+	visual.set_thrust(_throttle)
 
 	# 推进与阻力：转弯时保留侧向惯性，产生漂移感
 	var fwd := -global_transform.basis.z
@@ -100,16 +116,20 @@ func _process(delta: float) -> void:
 	_update_camera(delta)
 
 
+## 相机：只做"跟拍机位"的微调（远近 / 侧向偏移 / FOV），
+## 朝向完全由 Body 决定，所以转弯时画面与机翼始终同一水平基准。
 func _update_camera(delta: float) -> void:
 	var ratio := clampf((get_speed() - 8.0) / (MAX_SPEED - 8.0), 0.0, 1.0)
 	camera.fov = lerpf(FOV_BASE, FOV_MAX, ratio)
 	var target_z := lerpf(CAM_BASE_Z, CAM_MAX_Z, ratio)
+	var target_x := clampf(_yaw_rate * 0.55, -1.2, 1.2)
 	camera.position.z = lerpf(camera.position.z, target_z, 3.0 * delta)
+	camera.position.x = lerpf(camera.position.x, target_x, 3.0 * delta)
 
 
 ## 被小行星撞毁：停摆输入与旋转，并隐藏机体模型。
 func die() -> void:
 	set_process(false)
 	set_process_input(false)
-	if has_node("Visual"):
-		$Visual.visible = false
+	if has_node("Body/Visual"):
+		$"Body/Visual".visible = false

@@ -1,17 +1,32 @@
 extends Node3D
 ## 空间飞行 Demo 主场景。
-## 飞船沿机头方向实际飞行；Shift 加速 / Ctrl 减速；撞上小行星则飞船爆炸。
+## 飞船沿机头方向实际飞行；Shift 加速 / Ctrl 减速；撞上小行星按体积扣血，
+## 护甲先承伤，血量归零则飞船爆炸。左下角 HUD 显示血条与护甲。
 ## Esc 由 Pause 自动加载接管（弹出暂停菜单，可返回主菜单 / 退出）。
 
-const SHIP_RADIUS := 1.4
+const SHIP_RADIUS := 1.6 # 与放大后的机体（含机翼）尺寸匹配
+const MAX_HP := 100.0
+const INVULN_TIME := 0.9 # 受击后的短暂无敌，避免一次撞击连续扣血
+const HP_BAR_W := 300.0
+const ARMOR_BAR_W := 240.0
 
-@onready var ship: Node3D = $Ship
-@onready var star_field: Node3D = $StarField
-@onready var asteroid_field: Node3D = $AsteroidField
+@onready var ship: Ship = $Ship
+@onready var star_field: StarField = $StarField
+@onready var asteroid_field: AsteroidField = $AsteroidField
+@onready var weapons: Weapons = $Weapons
 @onready var speed_label: Label = $UI/SpeedLabel
 @onready var game_over: Control = $UI/GameOver
+@onready var hp_fill: ColorRect = $UI/HUD/HPFill
+@onready var armor_fill: ColorRect = $UI/HUD/ArmorFill
+@onready var hp_text: Label = $UI/HUD/HPText
+@onready var armor_text: Label = $UI/HUD/ArmorText
+@onready var hit_flash: ColorRect = $UI/HitFlash
+
+var hp := MAX_HP
+var armor := 0.0 # 默认无护甲；护甲先于血量承伤
 
 var _dead := false
+var _invuln := 0.0
 
 
 func _ready() -> void:
@@ -19,6 +34,7 @@ func _ready() -> void:
 	game_over.get_node("VBox/RetryButton").pressed.connect(_on_retry_pressed)
 	game_over.get_node("VBox/MenuButton").pressed.connect(_on_menu_pressed)
 	_update_speed_label()
+	_update_hud()
 
 
 func _process(delta: float) -> void:
@@ -32,10 +48,13 @@ func _process(delta: float) -> void:
 	star_field.update(t, delta)
 	asteroid_field.update(t, delta)
 
-	# 碰撞检测
-	if asteroid_field.collides(t.origin, SHIP_RADIUS):
-		_explode()
-		return
+	# 碰撞检测：命中则扣血（护甲先承伤）
+	_invuln = maxf(_invuln - delta, 0.0)
+	var hit := asteroid_field.hit_test(t.origin, SHIP_RADIUS)
+	if hit != null and _invuln <= 0.0:
+		_take_damage(hit, t)
+		if _dead:
+			return
 
 	_update_speed_label()
 
@@ -44,49 +63,48 @@ func _update_speed_label() -> void:
 	speed_label.text = "速度: %d" % ship.get_speed()
 
 
+## 受击：小行星越大伤害越高，护甲先扛，护甲耗尽后扣血。
+func _take_damage(hit: Asteroid, t: Transform3D) -> void:
+	var dmg := clampf(roundf(hit.scale.x * 10.0), 15.0, 45.0)
+	_invuln = INVULN_TIME
+
+	var absorbed := minf(armor, dmg)
+	armor -= absorbed
+	dmg -= absorbed
+	hp = maxf(hp - dmg, 0.0)
+
+	var at: Vector3 = hit.position
+	asteroid_field.recycle(hit)
+	Explosion.spawn(self, at, 0.5)
+	_flash_hit()
+	_update_hud()
+
+	if hp <= 0.0:
+		_explode()
+
+
+func _flash_hit() -> void:
+	hit_flash.color.a = 0.32
+	var tw := create_tween()
+	tw.tween_property(hit_flash, "color:a", 0.0, 0.45)
+
+
+func _update_hud() -> void:
+	var ratio := clampf(hp / MAX_HP, 0.0, 1.0)
+	hp_fill.size.x = maxf(HP_BAR_W * ratio, 0.0)
+	hp_fill.color = Color(1.0 - ratio * 0.55, 0.24 + ratio * 0.62, 0.22, 1.0)
+	hp_text.text = "血量  %d / %d" % [roundi(hp), roundi(MAX_HP)]
+	armor_fill.size.x = maxf(ARMOR_BAR_W * clampf(armor / MAX_HP, 0.0, 1.0), 0.0)
+	armor_text.text = "护甲  %d" % roundi(armor)
+
+
 func _explode() -> void:
 	_dead = true
 	ship.die()
-	_spawn_explosion(ship.global_transform.origin)
+	weapons.set_disabled(true) # 撞毁后停火（已在飞的弹药让它飞完）
+	Explosion.spawn(self, ship.global_transform.origin, 1.8)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	game_over.visible = true
-
-
-func _spawn_explosion(at: Vector3) -> void:
-	var flash := MeshInstance3D.new()
-	flash.mesh = SphereMesh.new()
-	flash.position = at
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0, 0, 0)
-	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.6, 0.2)
-	mat.emission_energy_multiplier = 4.0
-	flash.material_override = mat
-	add_child(flash)
-	var tw := create_tween()
-	tw.tween_property(flash, "scale", Vector3(7, 7, 7), 0.6)
-	tw.parallel().tween_property(mat, "emission_energy_multiplier", 0.0, 0.6)
-	tw.tween_callback(flash.queue_free)
-
-	for i in 14:
-		var d := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = Vector3(0.4, 0.4, 0.4)
-		d.mesh = bm
-		var dm := StandardMaterial3D.new()
-		dm.albedo_color = Color(0, 0, 0)
-		dm.emission_enabled = true
-		dm.emission = Color(1.0, 0.5, 0.1)
-		dm.emission_energy_multiplier = 3.0
-		d.material_override = dm
-		d.position = at
-		add_child(d)
-		var dir := Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)).normalized()
-		var spd := randf_range(6.0, 16.0)
-		var tw2 := create_tween()
-		tw2.tween_property(d, "position", at + dir * spd, randf_range(0.8, 1.3))
-		tw2.parallel().tween_property(dm, "emission_energy_multiplier", 0.0, 1.0)
-		tw2.tween_callback(d.queue_free)
 
 
 func _on_retry_pressed() -> void:
