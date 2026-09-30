@@ -1,6 +1,6 @@
 extends Node3D
-## Terrain3D 拟真地形场景：代码生成 1km² 地图（平原、山地、湖泊、土路）。
-## 草地/岩石使用 demo 真实照片纹理，路面/沙地程序化生成；树木岩石程序化散布。
+## Terrain3D 拟真地形场景：代码生成 1km² 地图（平原、山地、湖泊、草地）。
+## 全局绿草地（真实草皮照片），陡坡由 auto_shader 自动混岩石；树木岩石程序化散布。
 ## 玩家复用 demo Player：WASD 移动 / 鼠标视角 / V 第一人称 / Esc 暂停（全局 Pause 接管）。
 
 const WATER_LEVEL := 2.0
@@ -89,14 +89,10 @@ func _build_terrain() -> void:
 	add_child(_terrain)
 	_terrain.region_size = 1024
 
-	# 纹理资产：0 草地 / 1 土路 / 2 沙地 / 3 岩石（最后一个供 auto_shader 陡坡混合）
+	# 纹理资产：0 草地（真实草皮照片）/ 1 岩石（供 auto_shader 陡坡混合）
 	_terrain.assets = Terrain3DAssets.new()
 	_terrain.assets.set_texture(0, _real_texture("Grass", "ground037", 0.35))
-	_terrain.assets.set_texture(1, await _noise_texture("Road",
-			Color.from_hsv(28.0 / 360.0, 0.38, 0.30), Color.from_hsv(33.0 / 360.0, 0.35, 0.42), 0.4))
-	_terrain.assets.set_texture(2, await _noise_texture("Sand",
-			Color.from_hsv(43.0 / 360.0, 0.28, 0.60), Color.from_hsv(48.0 / 360.0, 0.24, 0.72), 0.35))
-	_terrain.assets.set_texture(3, _real_texture("Rock", "rock023", 0.3))
+	_terrain.assets.set_texture(1, _real_texture("Rock", "rock023", 0.3))
 
 	# 材质：按坡度自动把陡坡混到岩石纹理
 	_terrain.material.world_background = Terrain3DMaterial.WorldBackground.NONE
@@ -104,8 +100,9 @@ func _build_terrain() -> void:
 	_terrain.material.set_shader_param("auto_slope", 30.0)
 	_terrain.material.set_shader_param("blend_sharpness", 0.97)
 
-	var maps := _generate_maps()
-	_terrain.data.import_images([maps[0], null, maps[1]], Vector3(0.0, 0.0, 0.0), 0.0, 1.0)
+	# 只导高度图（官方 demo 验证过的方式，控制图自绘在运行时不可靠）
+	var h_img := _generate_height_map()
+	_terrain.data.import_images([h_img, null, null], Vector3(0.0, 0.0, 0.0), 0.0, 1.0)
 
 	# 运行时动态碰撞（跟随相机生成碰撞体）
 	_terrain.collision_mode = Terrain3DCollision.CollisionMode.DYNAMIC_GAME
@@ -114,81 +111,29 @@ func _build_terrain() -> void:
 func _real_texture(asset_name: String, base: String, uv: float) -> Terrain3DTextureAsset:
 	var ta := Terrain3DTextureAsset.new()
 	ta.name = asset_name
-	ta.albedo_texture = _uncompressed(load("res://demo/assets/textures/%s_alb_ht.png" % base))
-	ta.normal_texture = _uncompressed(load("res://demo/assets/textures/%s_nrm_rgh.png" % base))
+	ta.albedo_texture = _canonical(load("res://demo/assets/textures/%s_alb_ht.png" % base))
+	ta.normal_texture = _canonical(load("res://demo/assets/textures/%s_nrm_rgh.png" % base))
 	ta.uv_scale = uv
 	return ta
 
 
-# Terrain3D 要求所有资产纹理尺寸/格式一致：统一解压成未压缩格式
-func _uncompressed(tex: Texture2D) -> Texture2D:
+# Terrain3D 要求所有资产纹理尺寸/格式一致：统一解压并转为 RGBA8
+func _canonical(tex: Texture2D) -> ImageTexture:
 	var img := tex.get_image()
 	if img.is_compressed():
 		img.decompress()
+	if img.has_mipmaps():
+		img.clear_mipmaps()
+	if img.get_format() != Image.FORMAT_RGBA8:
+		img.convert(Image.FORMAT_RGBA8)
 	img.generate_mipmaps()
 	return ImageTexture.create_from_image(img)
 
 
-# 程序化纹理资产：噪声渐变 albedo（含高度通道）+ 噪声法线（含粗糙度通道）
-# 尺寸/格式自动对齐 grass 纹理（Terrain3D 要求所有资产纹理一致）
-func _noise_texture(asset_name: String, c0: Color, c1: Color, uv: float) -> Terrain3DTextureAsset:
-	var ref_img: Image = _uncompressed(load("res://demo/assets/textures/ground037_alb_ht.png")).get_image()
-	var tex_size := ref_img.get_width()
-	var tex_fmt := ref_img.get_format()
-
-	var grad := Gradient.new()
-	grad.set_color(0, c0)
-	grad.set_color(1, c1)
-	var fnl := FastNoiseLite.new()
-	fnl.frequency = 0.004
-
-	var alb_tex := NoiseTexture2D.new()
-	alb_tex.width = tex_size
-	alb_tex.height = tex_size
-	alb_tex.seamless = true
-	alb_tex.noise = fnl
-	alb_tex.color_ramp = grad
-	await alb_tex.changed
-	var alb_img := alb_tex.get_image()
-	for y in alb_img.get_height():
-		for x in alb_img.get_width():
-			var clr := alb_img.get_pixel(x, y)
-			clr.a = clr.v # 噪声作为高度通道
-			alb_img.set_pixel(x, y, clr)
-	alb_img.convert(tex_fmt)
-	alb_img.generate_mipmaps()
-	var albedo := ImageTexture.create_from_image(alb_img)
-
-	var nrm_tex := NoiseTexture2D.new()
-	nrm_tex.width = tex_size
-	nrm_tex.height = tex_size
-	nrm_tex.seamless = true
-	nrm_tex.as_normal_map = true
-	nrm_tex.noise = fnl
-	await nrm_tex.changed
-	var nrm_img := nrm_tex.get_image()
-	for y in nrm_img.get_height():
-		for x in nrm_img.get_width():
-			var px := nrm_img.get_pixel(x, y)
-			px.a = 0.8 # 粗糙度
-			nrm_img.set_pixel(x, y, px)
-	nrm_img.convert(tex_fmt)
-	nrm_img.generate_mipmaps()
-	var normal := ImageTexture.create_from_image(nrm_img)
-
-	var ta := Terrain3DTextureAsset.new()
-	ta.name = asset_name
-	ta.albedo_texture = albedo
-	ta.normal_texture = normal
-	ta.uv_scale = uv
-	return ta
-
-
-# 高度图（米）+ 控制图（纹理 id），一次导入
-func _generate_maps() -> Array:
+# 高度图（米）：全局草地，仅保留道路走廊压平与湖泊地形
+func _generate_height_map() -> Image:
 	var size := int(MAP_SIZE)
 	var h_img := Image.create_empty(size, size, false, Image.FORMAT_RF)
-	var c_img := Image.create_empty(size, size, false, Image.FORMAT_RG8)
 	for iz in size:
 		var wz := float(iz)
 		var road_px := _road_x(wz)
@@ -197,17 +142,9 @@ func _generate_maps() -> Array:
 			var wx := float(ix)
 			var h := _height_at(wx, wz)
 			var d := absf(float(ix) - road_px)
-			h = lerpf(road_h, h, smoothstep(4.0, 11.0, d)) # 路基压平
+			h = lerpf(road_h, h, smoothstep(4.0, 11.0, d)) # 路基压平（草地上的一条平缓小径）
 			h_img.set_pixel(ix, iz, Color(h, 0.0, 0.0, 1.0))
-			var id := 0
-			if d < 4.5 or (d < 7.5 and randf() < (7.5 - d) / 3.0):
-				id = 1 # 土路（边缘抖动过渡）
-			elif h < WATER_LEVEL + 1.8:
-				id = 2 # 水边沙地
-			elif h > 55.0 and randf() < clampf((h - 55.0) / 18.0, 0.0, 1.0):
-				id = 3 # 高山裸岩（抖动）
-			c_img.set_pixel(ix, iz, Color(id / 255.0, 0.0, 0.0, 1.0))
-	return [h_img, c_img]
+	return h_img
 
 
 # ---- 玩家与植被 ----
