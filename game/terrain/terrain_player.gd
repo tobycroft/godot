@@ -1,9 +1,11 @@
 extends CharacterBody3D
 ## 地形漫游玩家：基于 demo Player 修改。
-## Q/E 已让给铲子/堆土功能，不再用于升降；空格上升（重力关闭时可飞行），其余不变。
+## Q/E 已让给铲子/堆土功能；空格触发喷气背包持续上升（重力始终生效，松开下落），其余不变。
 
 @export var MOVE_SPEED: float = 14.0
-@export var JUMP_SPEED: float = 2.0
+@export var JET_THRUST: float = 60.0 # 喷气背包推力（上升加速度）
+@export var JET_MAX_UP: float = 9.0 # 喷气上升速度上限
+
 @export var first_person: bool = false :
 	set(p_value):
 		first_person = p_value
@@ -37,10 +39,12 @@ func _physics_process(p_delta) -> void:
 	velocity.z = h_veloc.y
 	if gravity_enabled:
 		velocity.y -= 40 * p_delta
+	if Input.is_key_pressed(KEY_SPACE):
+		velocity.y = minf(velocity.y + JET_THRUST * p_delta, JET_MAX_UP)
 	move_and_slide()
 
 
-# 返回相对相机的输入方向；空格上升（跳跃/飞行）
+# 返回相对相机的输入方向
 func get_camera_relative_input() -> Vector3:
 	var input_dir: Vector3 = Vector3.ZERO
 	if Input.is_key_pressed(KEY_A):
@@ -51,8 +55,6 @@ func get_camera_relative_input() -> Vector3:
 		input_dir -= %Camera3D.global_transform.basis.z
 	if Input.is_key_pressed(KEY_S):
 		input_dir += %Camera3D.global_transform.basis.z
-	if Input.is_key_pressed(KEY_SPACE):
-		velocity.y += JUMP_SPEED + MOVE_SPEED * .016
 	if Input.is_key_pressed(KEY_KP_ADD) or Input.is_key_pressed(KEY_EQUAL):
 		MOVE_SPEED = clamp(MOVE_SPEED + .5, 5, 9999)
 	if Input.is_key_pressed(KEY_KP_SUBTRACT) or Input.is_key_pressed(KEY_MINUS):

@@ -15,8 +15,8 @@ const IRIS := Color(0.20, 0.42, 0.62)
 const BLACK := Color(0.08, 0.08, 0.10)
 const MOUTH := Color(0.62, 0.30, 0.26)
 const BLUSH := Color(0.96, 0.62, 0.60)
-const PACK := Color(0.95, 0.78, 0.25)
-const PACK_DARK := Color(0.80, 0.60, 0.14)
+const METAL := Color(0.78, 0.80, 0.84)
+const METAL_DARK := Color(0.42, 0.44, 0.48)
 
 const HIP_H := 0.82 # 髋关节高度
 const STRIDE := 0.55 # 步频系数
@@ -31,6 +31,9 @@ var _hip_l: Node3D
 var _hip_r: Node3D
 var _knee_l: Node3D
 var _knee_r: Node3D
+var _flame_l: Node3D
+var _flame_r: Node3D
+var _jet_light: OmniLight3D
 
 var _t := 0.0
 var _phase := 0.0
@@ -40,7 +43,7 @@ var _mats := {}
 
 
 func _ready() -> void:
-	for c: Color in [SKIN, SHIRT, CAP, PANTS, HAIR, SHOE, SOLE, IRIS, BLACK, MOUTH, BLUSH, PACK, PACK_DARK, Color.WHITE]:
+	for c: Color in [SKIN, SHIRT, CAP, PANTS, HAIR, SHOE, SOLE, IRIS, BLACK, MOUTH, BLUSH, METAL, METAL_DARK, Color.WHITE]:
 		var m := StandardMaterial3D.new()
 		m.albedo_color = c
 		m.roughness = 0.75
@@ -53,6 +56,7 @@ func _physics_process(delta: float) -> void:
 	var parent_body := get_parent() as CharacterBody3D
 	var speed := Vector2(parent_body.velocity.x, parent_body.velocity.z).length()
 	var grounded: bool = parent_body.is_on_floor()
+	_update_jetpack(Input.is_key_pressed(KEY_SPACE), delta)
 
 	_run_blend = lerpf(_run_blend, clampf(speed / 2.5, 0.0, 1.0), 1.0 - exp(-12.0 * delta))
 	_air_blend = lerpf(_air_blend, 0.0 if grounded else 1.0, 1.0 - exp(-10.0 * delta))
@@ -121,6 +125,22 @@ func _face_movement(body: CharacterBody3D, delta: float, speed: float) -> void:
 		rotation.y = lerp_angle(rotation.y, yaw, 1.0 - exp(-10.0 * delta))
 
 
+## 喷气背包火焰：激活时显示锥形火舌 + 橙色点光，逐帧抖动模拟喷射
+func _update_jetpack(active: bool, delta: float) -> void:
+	if not active:
+		_flame_l.visible = false
+		_flame_r.visible = false
+		_jet_light.visible = false
+		return
+	_flame_l.visible = true
+	_flame_r.visible = true
+	_jet_light.visible = true
+	_jet_light.light_energy = randf_range(1.6, 3.2)
+	for flame: Node3D in [_flame_l, _flame_r]:
+		flame.scale = Vector3(randf_range(0.85, 1.1), randf_range(0.7, 1.3), randf_range(0.85, 1.1))
+		flame.rotation.z = randf_range(-0.08, 0.08)
+
+
 # ---- 建模 ----
 
 func _build() -> void:
@@ -149,9 +169,43 @@ func _build() -> void:
 	add_child(_torso)
 	_capsule(_torso, 0.23, 0.60, Vector3(0, 0.36, 0), _mats[SHIRT])
 	_box(_torso, Vector3(0.40, 0.12, 0.32), Vector3(0, 0.10, 0), _mats[PANTS]) # 裤腰
-	# 后背小书包
-	_box(_torso, Vector3(0.30, 0.34, 0.13), Vector3(0, 0.42, 0.23), _mats[PACK])
-	_box(_torso, Vector3(0.22, 0.10, 0.04), Vector3(0, 0.50, 0.30), _mats[PACK_DARK])
+	# 喷气背包：双燃料罐 + 喷口 + 肩带 + 火焰
+	for sx: float in [-1.0, 1.0]:
+		var tank: MeshInstance3D = _cyl(_torso, 0.095, 0.095, 0.44, Vector3(0.13 * sx, 0.44, 0.26), _mats[METAL])
+		tank.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		_cyl(_torso, 0.02, 0.095, 0.07, Vector3(0.13 * sx, 0.685, 0.26), _mats[METAL_DARK]) # 罐顶阀
+		_cyl(_torso, 0.055, 0.04, 0.08, Vector3(0.13 * sx, 0.19, 0.26), _mats[METAL_DARK]) # 喷口
+		_box(_torso, Vector3(0.05, 0.34, 0.05), Vector3(0.20 * sx, 0.46, 0.21), _mats[METAL_DARK]) # 支架
+		_box(_torso, Vector3(0.07, 0.30, 0.05), Vector3(0.16 * sx, 0.52, -0.14), _mats[PANTS]) # 肩带
+	var flame_out := StandardMaterial3D.new()
+	flame_out.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	flame_out.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	flame_out.albedo_color = Color(1.0, 0.45, 0.08, 0.65)
+	var flame_in := StandardMaterial3D.new()
+	flame_in.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	flame_in.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	flame_in.albedo_color = Color(1.0, 0.88, 0.45, 0.9)
+	for sx: float in [-1.0, 1.0]:
+		var flame := Node3D.new()
+		flame.position = Vector3(0.13 * sx, 0.15, 0.26)
+		flame.visible = false
+		_torso.add_child(flame)
+		var outer := _cyl(flame, 0.05, 0.006, 0.36, Vector3(0, -0.20, 0), flame_out)
+		var inner := _cyl(flame, 0.028, 0.004, 0.22, Vector3(0, -0.14, 0), flame_in)
+		outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		inner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if sx < 0.0:
+			_flame_l = flame
+		else:
+			_flame_r = flame
+	_jet_light = OmniLight3D.new()
+	_jet_light.light_color = Color(1.0, 0.6, 0.25)
+	_jet_light.omni_range = 5.0
+	_jet_light.omni_attenuation = 1.5
+	_jet_light.shadow_enabled = false
+	_jet_light.position = Vector3(0, -0.1, 0.30)
+	_jet_light.visible = false
+	_torso.add_child(_jet_light)
 
 	# 双臂（肩-肘铰链）
 	for sx: float in [-1.0, 1.0]:
@@ -197,6 +251,19 @@ func _build() -> void:
 	_sphere(_head, 0.38, Vector3(0, 0.50, 0.02), _mats[CAP], Vector3(1.0, 0.55, 1.0))
 	_box(_head, Vector3(0.34, 0.04, 0.26), Vector3(0, 0.46, -0.38), _mats[CAP])
 	_sphere(_head, 0.045, Vector3(0, 0.71, 0.02), _mats[CAP])
+
+
+func _cyl(parent: Node3D, top_r: float, bot_r: float, h: float, pos: Vector3, mat: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = top_r
+	cm.bottom_radius = bot_r
+	cm.height = h
+	mi.mesh = cm
+	mi.material_override = mat
+	mi.position = pos
+	parent.add_child(mi)
+	return mi
 
 
 func _sphere(parent: Node3D, r: float, pos: Vector3, mat: Material, scale := Vector3.ONE) -> void:
