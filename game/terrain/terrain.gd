@@ -1,10 +1,11 @@
 extends Node3D
-## Terrain3D 拟真地形场景：代码生成 1km² 地图（平原、山地、湖泊、草地）。
-## 全局绿草地（真实草皮照片），陡坡由 auto_shader 自动混岩石；树木岩石程序化散布。
+## Terrain3D 拟真地形场景：固定地形（首次生成后保存到 data/，之后从磁盘加载）。
+## 地面为程序化棕色土地纹理，陡坡由 auto_shader 自动混岩石；树木岩石程序化散布。
 ## 玩家复用 demo Player：WASD 移动 / 鼠标视角 / V 第一人称 / Esc 暂停（全局 Pause 接管）。
 
 const WATER_LEVEL := 2.0
 const MAP_SIZE := 1024.0 # 单区域 1024m，世界范围 [0,1024)²（region 边界必须对齐）
+const DATA_DIR := "res://game/terrain/data" # 保存后的固定地形数据目录
 const LAKE_CENTER := Vector2(215.0, 800.0) # 世界坐标 x,z
 const LAKE_OUTER := 150.0
 const LAKE_INNER := 70.0
@@ -40,18 +41,23 @@ func _ready() -> void:
 
 
 func _init_noise() -> void:
+	# 固定种子：保证每次生成的地形完全一致（"指定地形"）
+	_plain_noise.seed = 20260930
 	_plain_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	_plain_noise.fractal_type = FastNoiseLite.FRACTAL_FBM
 	_plain_noise.fractal_octaves = 4
 	_plain_noise.frequency = 0.004
+	_mountain_noise.seed = 20260930
 	_mountain_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	_mountain_noise.fractal_type = FastNoiseLite.FRACTAL_FBM
 	_mountain_noise.fractal_octaves = 3
 	_mountain_noise.frequency = 0.0011
+	_ridge_noise.seed = 20260930
 	_ridge_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	_ridge_noise.fractal_type = FastNoiseLite.FRACTAL_RIDGED
 	_ridge_noise.fractal_octaves = 4
 	_ridge_noise.frequency = 0.006
+	_cluster_noise.seed = 20260930
 	_cluster_noise.frequency = 0.015
 
 
@@ -89,9 +95,10 @@ func _build_terrain() -> void:
 	add_child(_terrain)
 	_terrain.region_size = 1024
 
-	# 纹理资产：0 草地（真实草皮照片）/ 1 岩石（供 auto_shader 陡坡混合）
+	# 纹理资产：0 土地（程序化棕色土壤）/ 1 岩石（供 auto_shader 陡坡混合）
 	_terrain.assets = Terrain3DAssets.new()
-	_terrain.assets.set_texture(0, _real_texture("Grass", "ground037", 0.35))
+	_terrain.assets.set_texture(0, await _noise_texture("Dirt",
+			Color.from_hsv(26.0 / 360.0, 0.42, 0.30), Color.from_hsv(33.0 / 360.0, 0.34, 0.46), 0.12))
 	_terrain.assets.set_texture(1, _real_texture("Rock", "rock023", 0.3))
 
 	# 材质：按坡度自动把陡坡混到岩石纹理
@@ -100,12 +107,24 @@ func _build_terrain() -> void:
 	_terrain.material.set_shader_param("auto_slope", 30.0)
 	_terrain.material.set_shader_param("blend_sharpness", 0.97)
 
-	# 只导高度图（官方 demo 验证过的方式，控制图自绘在运行时不可靠）
-	var h_img := _generate_height_map()
-	_terrain.data.import_images([h_img, null, null], Vector3(0.0, 0.0, 0.0), 0.0, 1.0)
+	# 指定地形：优先加载已保存的地形数据；没有则用固定种子生成并保存到磁盘
+	if _has_saved_terrain():
+		_terrain.data_directory = DATA_DIR
+		_terrain.data.load_directory(DATA_DIR)
+	else:
+		var h_img := _generate_height_map()
+		_terrain.data.import_images([h_img, null, null], Vector3(0.0, 0.0, 0.0), 0.0, 1.0)
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(DATA_DIR))
+		_terrain.data_directory = DATA_DIR
+		_terrain.data.save_directory(DATA_DIR)
 
 	# 运行时动态碰撞（跟随相机生成碰撞体）
 	_terrain.collision_mode = Terrain3DCollision.CollisionMode.DYNAMIC_GAME
+
+
+func _has_saved_terrain() -> bool:
+	var d := DirAccess.open(DATA_DIR)
+	return d != null and not d.get_files().is_empty()
 
 
 func _real_texture(asset_name: String, base: String, uv: float) -> Terrain3DTextureAsset:
@@ -130,7 +149,58 @@ func _canonical(tex: Texture2D) -> ImageTexture:
 	return ImageTexture.create_from_image(img)
 
 
-# 高度图（米）：全局草地，仅保留道路走廊压平与湖泊地形
+# 程序化纹理资产：噪声渐变土壤，尺寸/格式统一为 1024 RGBA8（与照片纹理一致）
+func _noise_texture(asset_name: String, c0: Color, c1: Color, uv: float) -> Terrain3DTextureAsset:
+	var grad := Gradient.new()
+	grad.set_color(0, c0)
+	grad.set_color(1, c1)
+	var fnl := FastNoiseLite.new()
+	fnl.seed = 20260930
+	fnl.frequency = 0.008
+
+	var alb_tex := NoiseTexture2D.new()
+	alb_tex.width = 1024
+	alb_tex.height = 1024
+	alb_tex.seamless = true
+	alb_tex.noise = fnl
+	alb_tex.color_ramp = grad
+	await alb_tex.changed
+	var alb_img := alb_tex.get_image()
+	for y in alb_img.get_height():
+		for x in alb_img.get_width():
+			var clr := alb_img.get_pixel(x, y)
+			clr.a = clr.v # 噪声作为高度通道（细微视差）
+			alb_img.set_pixel(x, y, clr)
+	alb_img.convert(Image.FORMAT_RGBA8)
+	alb_img.generate_mipmaps()
+	var albedo := ImageTexture.create_from_image(alb_img)
+
+	var nrm_tex := NoiseTexture2D.new()
+	nrm_tex.width = 1024
+	nrm_tex.height = 1024
+	nrm_tex.seamless = true
+	nrm_tex.as_normal_map = true
+	nrm_tex.noise = fnl
+	await nrm_tex.changed
+	var nrm_img := nrm_tex.get_image()
+	for y in nrm_img.get_height():
+		for x in nrm_img.get_width():
+			var px := nrm_img.get_pixel(x, y)
+			px.a = 0.85 # 粗糙度
+			nrm_img.set_pixel(x, y, px)
+	nrm_img.convert(Image.FORMAT_RGBA8)
+	nrm_img.generate_mipmaps()
+	var normal := ImageTexture.create_from_image(nrm_img)
+
+	var ta := Terrain3DTextureAsset.new()
+	ta.name = asset_name
+	ta.albedo_texture = albedo
+	ta.normal_texture = normal
+	ta.uv_scale = uv
+	return ta
+
+
+# 高度图（米）：全局土地，仅保留道路走廊压平与湖泊地形
 func _generate_height_map() -> Image:
 	var size := int(MAP_SIZE)
 	var h_img := Image.create_empty(size, size, false, Image.FORMAT_RF)
