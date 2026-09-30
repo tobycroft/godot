@@ -1,0 +1,89 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://game/terrain/terrain.gd" id="1_terrain"]
+[ext_resource type="Shader" path="res://game/terrain/water.gdshader" id="2_water"]
+[ext_resource type="PackedScene" path="res://demo/components/Player.tscn" id="3_player"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+sky_top_color = Color(0.22, 0.42, 0.72, 1)
+sky_horizon_color = Color(0.74, 0.82, 0.9, 1)
+ground_bottom_color = Color(0.2, 0.22, 0.26, 1)
+ground_horizon_color = Color(0.74, 0.82, 0.9, 1)
+sun_angle_max = 30.0
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_energy = 1.1
+tonemap_mode = 3
+glow_enabled = true
+glow_intensity = 0.5
+glow_bloom = 0.05
+fog_enabled = true
+fog_light_color = Color(0.75, 0.82, 0.9, 1)
+fog_density = 0.0012
+fog_sky_affect = 0.15
+
+[sub_resource type="PlaneMesh" id="water_mesh"]
+size = Vector2(1024, 1024)
+
+[sub_resource type="ShaderMaterial" id="water_mat"]
+shader = ExtResource("2_water")
+
+[node name="TerrainScene" type="Node3D"]
+script = ExtResource("1_terrain")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+light_color = Color(1, 0.95, 0.86, 1)
+light_energy = 1.3
+shadow_enabled = true
+directional_shadow_max_distance = 400.0
+
+[node name="Water" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 2, 512)
+cast_shadow = 0
+mesh = SubResource("water_mesh")
+material_override = SubResource("water_mat")
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+MOVE_SPEED = 14.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Hint" type="Label" parent="UI"]
+offset_left = 20.0
+offset_top = 16.0
+offset_right = 1100.0
+offset_bottom = 60.0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 20
+text = "WASD 移动 | 鼠标 视角 | V 第一/第三人称 | Q/E 升降 | G 重力开关 | C 碰撞开关 | 滚轮 调速 | Esc 暂停"
+
+[node name="Loading" type="Label" parent="UI"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -40.0
+offset_right = 220.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 40
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "正在生成地形…"
