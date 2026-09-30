@@ -1,11 +1,15 @@
 extends Node3D
 ## Terrain3D 拟真地形场景：固定地形（首次生成后保存到 data/，之后从磁盘加载）。
-## 地面为程序化棕色土地纹理，陡坡由 auto_shader 自动混岩石；树木岩石程序化散布。
-## 玩家复用 demo Player：WASD 移动 / 鼠标视角 / V 第一人称 / Esc 暂停（全局 Pause 接管）。
+## 全图土地材质；Q 铲低地面 / E 堆土成山（实时修改高度图）；树木岩石程序化散布。
+## 玩家用 terrain_player.gd：WASD 移动 / 鼠标视角 / V 第一人称 / Esc 暂停（全局 Pause 接管）。
 
 const WATER_LEVEL := 2.0
 const MAP_SIZE := 1024.0 # 单区域 1024m，世界范围 [0,1024)²（region 边界必须对齐）
 const DATA_DIR := "res://game/terrain/data" # 保存后的固定地形数据目录
+const BRUSH_RADIUS := 3.0 # 铲土/堆土笔刷半径（米）
+const DIG_SPEED := 9.0 # 每秒改变的高度（米）
+const HEIGHT_MIN := -20.0
+const HEIGHT_MAX := 90.0
 const LAKE_CENTER := Vector2(215.0, 800.0) # 世界坐标 x,z
 const LAKE_OUTER := 150.0
 const LAKE_INNER := 70.0
@@ -95,17 +99,13 @@ func _build_terrain() -> void:
 	add_child(_terrain)
 	_terrain.region_size = 1024
 
-	# 纹理资产：0 土地（程序化棕色土壤）/ 1 岩石（供 auto_shader 陡坡混合）
+	# 纹理资产：0 土地（程序化棕色土壤，全图唯一材质，无岩石/硬地）
 	_terrain.assets = Terrain3DAssets.new()
 	_terrain.assets.set_texture(0, await _noise_texture("Dirt",
 			Color.from_hsv(26.0 / 360.0, 0.42, 0.30), Color.from_hsv(33.0 / 360.0, 0.34, 0.46), 0.12))
-	_terrain.assets.set_texture(1, _real_texture("Rock", "rock023", 0.3))
 
-	# 材质：按坡度自动把陡坡混到岩石纹理
+	# 全部土地，不启用陡坡混合
 	_terrain.material.world_background = Terrain3DMaterial.WorldBackground.NONE
-	_terrain.material.auto_shader = true
-	_terrain.material.set_shader_param("auto_slope", 30.0)
-	_terrain.material.set_shader_param("blend_sharpness", 0.97)
 
 	# 指定地形：优先加载已保存的地形数据；没有则用固定种子生成并保存到磁盘
 	if _has_saved_terrain():
@@ -120,6 +120,40 @@ func _build_terrain() -> void:
 
 	# 运行时动态碰撞（跟随相机生成碰撞体）
 	_terrain.collision_mode = Terrain3DCollision.CollisionMode.DYNAMIC_GAME
+
+
+func _physics_process(delta: float) -> void:
+	if _terrain == null:
+		return
+	var dir := 0.0
+	if Input.is_key_pressed(KEY_Q):
+		dir -= 1.0
+	elif Input.is_key_pressed(KEY_E):
+		dir += 1.0
+	if dir != 0.0:
+		_apply_brush(dir, delta)
+
+
+## 铲土/堆土：以玩家脚下为中心的圆形笔刷平滑修改高度（Q 挖低 / E 堆高）
+func _apply_brush(dir: float, delta: float) -> void:
+	var change := dir * DIG_SPEED * delta
+	var spacing := _terrain.get_vertex_spacing()
+	var r := int(ceil(BRUSH_RADIUS / spacing))
+	var edited := false
+	for dx in range(-r, r + 1):
+		for dz in range(-r, r + 1):
+			var d := Vector2(dx, dz) * spacing
+			if d.length() > BRUSH_RADIUS:
+				continue
+			var pos := Vector3(player.position.x + d.x, 0.0, player.position.z + d.y)
+			var h := _terrain.data.get_height(pos)
+			if not is_finite(h):
+				continue
+			var falloff := 1.0 - smoothstep(0.0, BRUSH_RADIUS, d.length())
+			_terrain.data.set_height(pos, clampf(h + change * falloff, HEIGHT_MIN, HEIGHT_MAX))
+			edited = true
+	if edited:
+		_terrain.data.update_maps(0, true, false) # 0 = TYPE_HEIGHT，刷新高度图网格
 
 
 func _has_saved_terrain() -> bool:

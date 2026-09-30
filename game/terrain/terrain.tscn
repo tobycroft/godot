@@ -1,8 +1,9 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://game/terrain/terrain.gd" id="1_terrain"]
 [ext_resource type="Shader" path="res://game/terrain/water.gdshader" id="2_water"]
 [ext_resource type="PackedScene" path="res://demo/components/Player.tscn" id="3_player"]
+[ext_resource type="Script" path="res://game/terrain/terrain_player.gd" id="4_tplayer"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.22, 0.42, 0.72, 1)
@@ -53,6 +54,7 @@ mesh = SubResource("water_mesh")
 material_override = SubResource("water_mat")
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
+script = ExtResource("4_tplayer")
 MOVE_SPEED = 14.0
 
 [node name="UI" type="CanvasLayer" parent="."]
@@ -66,7 +68,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 20
-text = "WASD 移动 | 鼠标 视角 | V 第一/第三人称 | Q/E 升降 | G 重力开关 | C 碰撞开关 | 滚轮 调速 | Esc 暂停"
+text = "WASD 移动 | 鼠标 视角 | Q 铲地 / E 堆土 | 空格 上升 | G 重力 | C 碰撞 | V 视角 | 滚轮 调速 | Esc 暂停"
 
 [node name="Loading" type="Label" parent="UI"]
 anchors_preset = 8
