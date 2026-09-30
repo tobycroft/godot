@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _initialize() -> void:
-	var packed := load("res://app/main/main.tscn") as PackedScene
+	var packed := load("res://app/main.tscn") as PackedScene
 	var inst := packed.instantiate()
 	root.add_child(inst)
 	# 等几帧让渲染完成
