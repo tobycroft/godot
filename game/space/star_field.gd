@@ -13,11 +13,6 @@ func _ready() -> void:
 	_mm = MultiMeshInstance3D.new()
 	add_child(_mm)
 
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.instance_count = COUNT
-	_mm.multimesh = mm
-
 	var star_mesh := BoxMesh.new()
 	star_mesh.size = Vector3(0.5, 0.5, 0.5)
 
@@ -26,6 +21,12 @@ func _ready() -> void:
 	star_mat.emission_enabled = true
 	star_mat.emission = Color(1, 1, 1)
 	star_mat.emission_energy_multiplier = 2.0
+
+	var mm := MultiMesh.new()
+	mm.mesh = star_mesh
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.instance_count = COUNT
+	_mm.multimesh = mm
 	_mm.material_override = star_mat
 
 	for i in COUNT:
