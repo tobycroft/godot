@@ -104,7 +104,22 @@ func _explode() -> void:
 	weapons.set_disabled(true) # 撞毁后停火（已在飞的弹药让它飞完）
 	Explosion.spawn(self, ship.global_transform.origin, 1.8)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_show_game_over()
+
+
+## 撞毁后弹出的结算面板：暗化 + 由小到大弹入，而不是瞬间出现。
+func _show_game_over() -> void:
 	game_over.visible = true
+	var dim := game_over.get_node("Dim") as CanvasItem
+	var vbox := game_over.get_node("VBox") as Control
+	dim.modulate = Color(1, 1, 1, 0)
+	vbox.pivot_offset = vbox.size * 0.5
+	vbox.scale = Vector2(0.85, 0.85)
+	vbox.modulate = Color(1, 1, 1, 0)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(dim, "modulate", Color(1, 1, 1, 1), 0.4)
+	tw.tween_property(vbox, "modulate", Color(1, 1, 1, 1), 0.45).set_delay(0.05)
+	tw.tween_property(vbox, "scale", Vector2(1.0, 1.0), 0.5).set_delay(0.05).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func _on_retry_pressed() -> void:
