@@ -1,0 +1,56 @@
+[gd_scene format=3 uid="uid://cl0ad1ngscr2"]
+
+[ext_resource type="Script" path="res://app/loading/loading.gd" id="1_loading"]
+[ext_resource type="Script" path="res://app/loading/spinner.gd" id="2_spinner"]
+
+[node name="Loading" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_loading")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0.04, 0.05, 0.09, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center"]
+layout_mode = 1
+theme_override_constants/separation = 26
+
+[node name="Spinner" type="Control" parent="Center/VBox"]
+layout_mode = 1
+custom_minimum_size = Vector2(72, 72)
+script = ExtResource("2_spinner")
+
+[node name="Label" type="Label" parent="Center/VBox"]
+layout_mode = 1
+text = "Loading…"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.9, 0.92, 1, 1)
+
+[node name="ProgressBar" type="ProgressBar" parent="Center/VBox"]
+layout_mode = 1
+custom_minimum_size = Vector2(300, 12)
+value = 0.0
+show_percentage = false

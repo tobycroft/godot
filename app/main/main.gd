@@ -5,6 +5,8 @@ extends Control
 const INTRO_STAGGER := 0.09  # 按钮逐个入场的时间间隔
 const SLIDE := 26.0          # 按钮入场时从下方滑入的距离
 
+const LOADING_SCENE := preload("res://app/loading/loading.tscn")
+
 @onready var btn_2d: Button = $Start2DButton
 @onready var btn_running_man: Button = $StartRunningManButton
 @onready var btn_space: Button = $StartSpaceButton
@@ -78,15 +80,24 @@ func _on_2d_pressed() -> void:
 
 
 func _on_running_man_pressed() -> void:
-	get_tree().change_scene_to_file("res://game/running_man/runner/runner.tscn")
+	_goto_level("res://game/running_man/runner/runner.tscn")
 
 
 func _on_space_pressed() -> void:
-	get_tree().change_scene_to_file("res://game/space/space.tscn")
+	_goto_level("res://game/space/space.tscn")
 
 
 func _on_terrain_pressed() -> void:
-	get_tree().change_scene_to_file("res://game/terrain/terrain.tscn")
+	_goto_level("res://game/terrain/terrain.tscn")
+
+
+## 先叠一层加载界面（后台线程加载关卡场景），加载完成后再切换过去。
+## 关卡（地图）资源较重，直接 change_scene_to_file 会卡住主线程，
+## 用 loading 过渡既避免卡顿也避免白屏。
+func _goto_level(path: String) -> void:
+	var loading := LOADING_SCENE.instantiate() as Control
+	loading.target_path = path
+	add_child(loading)
 
 
 func _on_settings_pressed() -> void:
